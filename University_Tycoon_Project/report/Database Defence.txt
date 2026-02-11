@@ -1,0 +1,21 @@
+Database Defence 
+
+Assumptions and Data Integrity I assumed that no debt was allowed. To enforce this, I used CHECK (credits >= 0). Similarly, I enforced domain integrity on location_type and special_type using the check constraint IN ('corner', 'hearing',’rag’.’building’). Foreign keys linking the player, token, and location tables guarantee referential integrity and make sure a player can't be assigned a token or given a location that does not exist on the board. To ensure reproducibility and traceability, I assumed the audit_log was to contain the initial state of the database. 
+
+Normalization and Schema Design To normalize to 3NF, I separated the building and location tables. Otherwise, non-building locations would have null values. I created the input table to drive the system. Normalization is not broken as this is a game engine, while the audit_log stores the result. If a player rolls a 6, it is recorded as two separate turns. Rolls of 6 and 3 are recorded individually. 
+
+Movement and Tracking Logic The move trigger calculates the new position using (((current + roll - 1) % 20) + 1). In the audit trigger, I used dynamic tracking to track the round to make the audit_log entity self-sufficient. Additionally, the welcome_week trigger uses if new.current_location < old.current_location to see if a player has completed a lap so it knows when to add 100 credits to the player without the need for a boolean. 
+
+Financial Triggers Subsequently, triggers tuition and auto_buy_property deal with financial transactions. The code (select dice_roll <> 6) is added to all triggers that are financial; this means that if a 6 is rolled, the transaction is ignored as they are going to roll again. Furthermore, the logic IF Count(Owned in Colour) == Count(Total in Colour) ensures the code will not break if rules change, yet allows for tuition to be doubled if a player owns all of a colour. 
+
+Status Management and Views Triggers special and suspension create a chain reaction. To separate visiting from suspended, I used a check on the trigger (old.current_location <> 18) to make sure they came from 18 to give them 'suspended'; if they did not and they are at location 8, I give them 'visiting' status to prevent false imprisonment. Finally, in the view I used LOWER(REPLACE(..., ' ', '_')), GROUP_CONCAT, and LEFT JOIN to ensure all players are displayed. In the leaderboard specifically, I used the LEFT JOIN of players and buildings rather than an inner join, as an inner join would have removed players with no property from the view. 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
